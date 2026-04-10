@@ -22,6 +22,7 @@ module.exports = async (req, res) => {
   try {
     const {
       submissionId, studentName, answers,
+      answerHistory, gazeLog,
       timeUsed, tabSwitches, activityLog,
       cameraUsed, snapshotCount, flaggedQuestions, status,
       startedAt, allottedSeconds
@@ -46,6 +47,8 @@ module.exports = async (req, res) => {
       id: submissionId,
       student_name: studentName,
       answers,
+      answer_history: answerHistory || {},
+      gaze_log: gazeLog || [],
       score,
       percent,
       per_question: perQuestion,
