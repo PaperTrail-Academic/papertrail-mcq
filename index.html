@@ -1235,7 +1235,9 @@ let currentPassage = 0;
 let flagged = new Set();
 let tabSwitches = [];
 let activityLog = [];
-let timeLeft = 3600;
+let timeLeft = 3600;        // counts down from allottedSeconds
+let allottedSeconds = 3600; // this student's personal time limit
+let examStartedAt = null;   // ISO string — when student clicked Begin
 let timerInterval = null;
 let statusPollInterval = null;
 let syncInterval = null;
@@ -1243,6 +1245,7 @@ let cameraStream = null;
 let snapshotCount = 0;
 let examPaused = false;
 let examStatus = 'waiting';
+let defaultDurationMinutes = 60; // from exam row
 
 // ═══════════════════════════════════════════════════════════
 // ENTRY — status poll + roster load
@@ -1270,6 +1273,7 @@ async function pollStatus() {
     const r = await fetch('/api/status');
     const data = await r.json();
     examStatus = data.status;
+    if (data.duration_minutes) defaultDurationMinutes = data.duration_minutes;
     const dot = document.getElementById('status-dot');
     const txt = document.getElementById('status-text');
     const nameStep = document.getElementById('step-name');
@@ -1317,7 +1321,6 @@ function beginExam() {
   if (!sel.value) { alert('Please select your name.'); return; }
   if (!code) { alert('Please enter the start code.'); return; }
 
-  // Verify code against what status endpoint returned — we'll fetch fresh
   fetch('/api/status').then(r => r.json()).then(data => {
     if (String(data.start_code) !== String(code)) {
       alert('Incorrect start code. Please check with your teacher.');
@@ -1325,34 +1328,68 @@ function beginExam() {
     }
     studentName = sel.value;
     submissionId = crypto.randomUUID();
+    allottedSeconds = (data.duration_minutes || defaultDurationMinutes) * 60;
+    timeLeft = allottedSeconds;
     clearInterval(statusPollInterval);
-    launchExam();
+    requestCamera();
   }).catch(() => alert('Could not verify code. Check your connection.'));
+}
+
+// Camera is REQUIRED — no option to skip
+function requestCamera() {
+  const btn = document.getElementById('begin-btn');
+  btn.disabled = true;
+  btn.textContent = 'Waiting for camera…';
+
+  navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+    .then(stream => {
+      cameraStream = stream;
+      launchExam();
+    })
+    .catch(err => {
+      btn.disabled = false;
+      btn.textContent = 'Begin Exam →';
+      alert(
+        'Camera access is required to take this exam.\n\n' +
+        'Please:\n1. Click "Allow" when your browser asks for camera permission\n' +
+        '2. If you denied it, click the camera icon in your address bar and allow access\n' +
+        '3. If your device has no camera, use a device that does\n\n' +
+        'Contact your teacher if you need help.'
+      );
+    });
 }
 
 // ═══════════════════════════════════════════════════════════
 // LAUNCH
 // ═══════════════════════════════════════════════════════════
 function launchExam() {
-  // Try camera
-  navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-    cameraStream = stream;
-    document.getElementById('webcam-corner').style.display = 'block';
-    document.getElementById('webcam-video').srcObject = stream;
-    startSnapshots();
-  }).catch(() => {});
+  // Camera already granted by requestCamera() — wire up the corner feed
+  document.getElementById('webcam-corner').style.display = 'block';
+  document.getElementById('webcam-video').srcObject = cameraStream;
+  startSnapshots();
 
-  document.getElementById('waiting-screen').style.display = 'none';
-  document.getElementById('exam-screen').style.display = 'flex';
+  // Record exact start time for per-student timer tracking
+  examStartedAt = new Date().toISOString();
 
-  // Restore from localStorage
+  // Restore from localStorage (same student, same day)
   try {
     const saved = JSON.parse(localStorage.getItem('aplang_mcq2_' + studentName));
     if (saved && saved.date === new Date().toLocaleDateString()) {
       answers = saved.answers || {};
-      timeLeft = saved.timeLeft || 3600;
+      // Recalculate timeLeft from startedAt + allottedSeconds if we have it
+      if (saved.startedAt && saved.allottedSeconds) {
+        const elapsed = Math.floor((Date.now() - new Date(saved.startedAt).getTime()) / 1000);
+        allottedSeconds = saved.allottedSeconds;
+        timeLeft = Math.max(0, allottedSeconds - elapsed);
+        examStartedAt = saved.startedAt;
+      } else {
+        timeLeft = saved.timeLeft || allottedSeconds;
+      }
     }
   } catch {}
+
+  document.getElementById('waiting-screen').style.display = 'none';
+  document.getElementById('exam-screen').style.display = 'flex';
 
   buildNavDots();
   showPassage(0);
@@ -1362,6 +1399,9 @@ function launchExam() {
   setupStatusPoll();
   log('Exam started');
   syncInterval = setInterval(() => syncProgress('In Progress'), 60000);
+
+  // Initial save to register student in Supabase immediately
+  syncProgress('In Progress');
 }
 
 function setupStatusPoll() {
@@ -1372,8 +1412,25 @@ function setupStatusPoll() {
       if (data.status === 'paused' && !examPaused) pauseExam();
       if (data.status === 'active' && examPaused) resumeExam();
       if (data.status === 'stopped') submitExam();
+
+      // Check if teacher added time — fetch our own submission row
+      if (!examPaused && submissionId) {
+        try {
+          const sr = await fetch(`/api/student-time?id=${submissionId}`);
+          if (sr.ok) {
+            const sd = await sr.json();
+            if (sd.allotted_seconds && sd.allotted_seconds !== allottedSeconds) {
+              // Teacher added time — recalculate timeLeft
+              const added = sd.allotted_seconds - allottedSeconds;
+              allottedSeconds = sd.allotted_seconds;
+              timeLeft = Math.min(timeLeft + added, allottedSeconds);
+              log(`Teacher added ${Math.round(added/60)} minutes`);
+            }
+          }
+        } catch {}
+      }
     } catch {}
-  }, 10000);
+  }, 15000);
 }
 
 function pauseExam() {
@@ -1530,12 +1587,12 @@ function startTimer() {
 function setupTabMonitor() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-      const ts = { time: new Date().toISOString(), at: formatTime(3600-timeLeft) };
+      const ts = { time: new Date().toISOString(), at: formatTime(allottedSeconds - timeLeft) };
       tabSwitches.push(ts);
       document.getElementById('tb-switches').textContent = tabSwitches.length;
-      const alert = document.getElementById('tab-alert');
-      alert.style.display = 'flex';
-      setTimeout(() => alert.style.display = 'none', 5000);
+      const alertEl = document.getElementById('tab-alert');
+      alertEl.style.display = 'flex';
+      setTimeout(() => alertEl.style.display = 'none', 5000);
       log(`Tab switch #${tabSwitches.length}`);
       syncProgress('In Progress');
     }
@@ -1548,7 +1605,8 @@ function setupTabMonitor() {
 function saveLocal() {
   try {
     localStorage.setItem('aplang_mcq2_' + studentName, JSON.stringify({
-      answers, timeLeft, date: new Date().toLocaleDateString()
+      answers, timeLeft, allottedSeconds, startedAt: examStartedAt,
+      date: new Date().toLocaleDateString()
     }));
   } catch {}
 }
@@ -1561,12 +1619,14 @@ async function syncProgress(status) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         submissionId, studentName, answers,
-        timeUsed: formatTime(3600-timeLeft),
+        timeUsed: formatTime(allottedSeconds - timeLeft),
         tabSwitches, activityLog,
         cameraUsed: !!cameraStream,
         snapshotCount,
         flaggedQuestions: [...flagged],
-        status
+        status,
+        startedAt: examStartedAt,
+        allottedSeconds
       })
     });
   } catch {}
@@ -1609,12 +1669,14 @@ async function submitExam() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         submissionId, studentName, answers,
-        timeUsed: formatTime(3600-timeLeft),
+        timeUsed: formatTime(allottedSeconds - timeLeft),
         tabSwitches, activityLog,
         cameraUsed: !!cameraStream,
         snapshotCount,
         flaggedQuestions: [...flagged],
-        status: 'Submitted'
+        status: 'Submitted',
+        startedAt: examStartedAt,
+        allottedSeconds
       })
     });
     scoreData = await r.json();
@@ -1646,7 +1708,7 @@ function buildResults(scoreData) {
     <div class="result-card"><div class="rc-val" style="color:var(--red)">${incorrect}</div><div class="rc-label">Incorrect</div></div>
     <div class="result-card"><div class="rc-val">${blank}</div><div class="rc-label">Blank</div></div>
     <div class="result-card"><div class="rc-val">${pct}%</div><div class="rc-label">Score</div></div>
-    <div class="result-card"><div class="rc-val">${formatTime(3600-timeLeft)}</div><div class="rc-label">Time Used</div></div>
+    <div class="result-card"><div class="rc-val">${formatTime(allottedSeconds - timeLeft)}</div><div class="rc-label">Time Used</div></div>
     <div class="result-card"><div class="rc-val">${tabSwitches.length}</div><div class="rc-label">Tab Switches</div></div>
   `;
 
