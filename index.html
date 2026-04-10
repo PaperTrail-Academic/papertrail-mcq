@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AP English Language — Practice Exam #2</title>
+<script src="https://cdn.jsdelivr.net/npm/webgazer@2.1.0/dist/webgazer.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
 
@@ -707,24 +708,34 @@ body {
 #webcam-corner {
   position: fixed;
   bottom: 14px; right: 14px;
-  width: 90px; height: 64px;
+  width: 120px; height: 86px;
   border-radius: 6px;
   overflow: hidden;
-  border: 2px solid rgba(0,0,0,0.2);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  border: 2px solid rgba(0,0,0,0.3);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   z-index: 200;
   background: #111;
   display: none;
-  opacity: 0.8;
-  transition: opacity 0.2s;
+  opacity: 0.85;
+  transition: opacity 0.2s, box-shadow 0.2s;
+  cursor: grab;
+  user-select: none;
 }
 
-#webcam-corner:hover { opacity: 1; }
-#webcam-corner video { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+#webcam-corner:hover { opacity: 1; box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+#webcam-corner.dragging { cursor: grabbing; opacity: 1; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+#webcam-corner video { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); pointer-events:none; }
 #webcam-label {
   position: absolute; bottom: 3px; left: 4px;
   font-family: var(--mono); font-size: 7px;
   color: rgba(255,255,255,0.6); letter-spacing: 0.06em;
+  pointer-events: none;
+}
+#gaze-indicator {
+  position: absolute; top: 3px; right: 4px;
+  font-family: var(--mono); font-size: 7px;
+  color: rgba(56,217,169,0.8); letter-spacing: 0.04em;
+  pointer-events: none;
 }
 
 /* ════════════════════════════════════════════════════════
@@ -1038,10 +1049,11 @@ body {
     </div>
   </div>
 
-  <!-- Webcam -->
+  <!-- Webcam — draggable -->
   <div id="webcam-corner">
     <video id="webcam-video" autoplay muted playsinline></video>
     <span id="webcam-label">● REC</span>
+    <span id="gaze-indicator">👁 ON</span>
   </div>
 </div>
 
@@ -1230,14 +1242,18 @@ const QUESTIONS = [
 let studentName = '';
 let submissionId = '';
 let answers = {};
+let answerHistory = {}; // {qNum: [{letter, time, elapsed, wasCorrect}]}
 let currentQ = 1;
 let currentPassage = 0;
 let flagged = new Set();
 let tabSwitches = [];
 let activityLog = [];
-let timeLeft = 3600;        // counts down from allottedSeconds
-let allottedSeconds = 3600; // this student's personal time limit
-let examStartedAt = null;   // ISO string — when student clicked Begin
+let gazeLog = [];        // [{t, elapsed, zone, duration}] — gaze-off-screen events
+let gazeOffStart = null; // timestamp when gaze left screen
+let gazeCalibrated = false;
+let timeLeft = 3600;
+let allottedSeconds = 3600;
+let examStartedAt = null;
 let timerInterval = null;
 let statusPollInterval = null;
 let syncInterval = null;
@@ -1245,7 +1261,7 @@ let cameraStream = null;
 let snapshotCount = 0;
 let examPaused = false;
 let examStatus = 'waiting';
-let defaultDurationMinutes = 60; // from exam row
+let defaultDurationMinutes = 60;
 
 // ═══════════════════════════════════════════════════════════
 // ENTRY — status poll + roster load
@@ -1367,6 +1383,7 @@ function launchExam() {
   document.getElementById('webcam-corner').style.display = 'block';
   document.getElementById('webcam-video').srcObject = cameraStream;
   startSnapshots();
+  setupDraggableWebcam();
 
   // Record exact start time for per-student timer tracking
   examStartedAt = new Date().toISOString();
@@ -1376,7 +1393,7 @@ function launchExam() {
     const saved = JSON.parse(localStorage.getItem('aplang_mcq2_' + studentName));
     if (saved && saved.date === new Date().toLocaleDateString()) {
       answers = saved.answers || {};
-      // Recalculate timeLeft from startedAt + allottedSeconds if we have it
+      answerHistory = saved.answerHistory || {};
       if (saved.startedAt && saved.allottedSeconds) {
         const elapsed = Math.floor((Date.now() - new Date(saved.startedAt).getTime()) / 1000);
         allottedSeconds = saved.allottedSeconds;
@@ -1397,10 +1414,9 @@ function launchExam() {
   startTimer();
   setupTabMonitor();
   setupStatusPoll();
+  initWebGazer();
   log('Exam started');
   syncInterval = setInterval(() => syncProgress('In Progress'), 60000);
-
-  // Initial save to register student in Supabase immediately
   syncProgress('In Progress');
 }
 
@@ -1438,6 +1454,7 @@ function pauseExam() {
   clearInterval(timerInterval);
   document.getElementById('pause-banner').style.display = 'flex';
   log('Exam paused by teacher');
+  if (typeof webgazer !== 'undefined') webgazer.pause();
 }
 
 function resumeExam() {
@@ -1445,6 +1462,112 @@ function resumeExam() {
   startTimer();
   document.getElementById('pause-banner').style.display = 'none';
   log('Exam resumed');
+  if (typeof webgazer !== 'undefined') webgazer.resume();
+}
+
+// ═══════════════════════════════════════════════════════════
+// DRAGGABLE WEBCAM
+// ═══════════════════════════════════════════════════════════
+function setupDraggableWebcam() {
+  const el = document.getElementById('webcam-corner');
+  let isDragging = false, startX, startY, startLeft, startTop;
+
+  el.addEventListener('mousedown', e => {
+    isDragging = true;
+    el.classList.add('dragging');
+    startX = e.clientX;
+    startY = e.clientY;
+    const rect = el.getBoundingClientRect();
+    startLeft = rect.left;
+    startTop = rect.top;
+    // Switch from bottom/right to top/left positioning for drag
+    el.style.right = 'auto';
+    el.style.bottom = 'auto';
+    el.style.left = startLeft + 'px';
+    el.style.top = startTop + 'px';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    const newLeft = Math.max(0, Math.min(window.innerWidth - el.offsetWidth, startLeft + dx));
+    const newTop = Math.max(0, Math.min(window.innerHeight - el.offsetHeight, startTop + dy));
+    el.style.left = newLeft + 'px';
+    el.style.top = newTop + 'px';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isDragging) { isDragging = false; el.classList.remove('dragging'); }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// EYE TRACKING — WebGazer
+// ═══════════════════════════════════════════════════════════
+function initWebGazer() {
+  if (typeof webgazer === 'undefined') {
+    log('WebGazer not loaded — eye tracking unavailable');
+    document.getElementById('gaze-indicator').style.display = 'none';
+    return;
+  }
+
+  // Hide WebGazer's own video/face overlay — we use our own webcam corner
+  webgazer.params.showVideoPreview = false;
+  webgazer.params.showFaceOverlay = false;
+  webgazer.params.showFaceFeedbackBox = false;
+
+  webgazer
+    .setRegression('ridge')
+    .setTracker('TFFacemesh')
+    .setGazeListener((data, elapsed) => {
+      if (!data || examPaused) return;
+
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      const x = data.x;
+      const y = data.y;
+
+      // Determine if gaze is off-screen or near edges
+      const margin = 80; // px buffer — gaze near edge counts as off
+      const offScreen = x < -margin || x > W + margin || y < -margin || y > H + margin;
+      const nearEdge = x < margin || x > W - margin || y < margin || y > H - margin;
+
+      if (offScreen || nearEdge) {
+        if (!gazeOffStart) {
+          gazeOffStart = Date.now();
+        }
+        document.getElementById('gaze-indicator').textContent = '👁 ⚠';
+        document.getElementById('gaze-indicator').style.color = 'rgba(246,190,91,0.9)';
+      } else {
+        if (gazeOffStart) {
+          const duration = Math.round((Date.now() - gazeOffStart) / 1000);
+          if (duration >= 2) { // only log if looked away for 2+ seconds
+            gazeLog.push({
+              t: new Date().toISOString(),
+              elapsed: allottedSeconds - timeLeft,
+              duration,
+              x: Math.round(x),
+              y: Math.round(y)
+            });
+            log(`Gaze off screen ${duration}s at Q${currentQ}`);
+          }
+          gazeOffStart = null;
+        }
+        document.getElementById('gaze-indicator').textContent = '👁 ON';
+        document.getElementById('gaze-indicator').style.color = 'rgba(56,217,169,0.8)';
+      }
+    })
+    .begin()
+    .then(() => {
+      gazeCalibrated = true;
+      log('Eye tracking active');
+    })
+    .catch(err => {
+      log('Eye tracking failed: ' + err.message);
+      document.getElementById('gaze-indicator').style.display = 'none';
+    });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1555,9 +1678,20 @@ function goToQ(n) {
 }
 
 function selectAnswer(n, letter) {
+  const prev = answers[n];
   answers[n] = letter;
+
+  // Track answer history with elapsed time
+  if (!answerHistory[n]) answerHistory[n] = [];
+  answerHistory[n].push({
+    letter,
+    prev: prev || null,
+    t: new Date().toISOString(),
+    elapsed: allottedSeconds - timeLeft  // seconds into exam
+  });
+
   goToQ(n);
-  log(`Q${n}: ${letter}`);
+  log(`Q${n}: ${prev ? prev + '→' : ''}${letter}`);
   saveLocal();
 }
 
@@ -1605,8 +1739,8 @@ function setupTabMonitor() {
 function saveLocal() {
   try {
     localStorage.setItem('aplang_mcq2_' + studentName, JSON.stringify({
-      answers, timeLeft, allottedSeconds, startedAt: examStartedAt,
-      date: new Date().toLocaleDateString()
+      answers, answerHistory, timeLeft, allottedSeconds,
+      startedAt: examStartedAt, date: new Date().toLocaleDateString()
     }));
   } catch {}
 }
@@ -1619,6 +1753,7 @@ async function syncProgress(status) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         submissionId, studentName, answers,
+        answerHistory, gazeLog,
         timeUsed: formatTime(allottedSeconds - timeLeft),
         tabSwitches, activityLog,
         cameraUsed: !!cameraStream,
