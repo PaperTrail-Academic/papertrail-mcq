@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teacher Dashboard — AP Lang PE2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
+
+:root {
+  --bg: #090b0f;
+  --surface: #10141c;
+  --surface2: #171d29;
+  --surface3: #1e2636;
+  --border: rgba(255,255,255,.09);
+  --border2: rgba(255,255,255,.16);
+  --text: #dde4f0;
+  --muted: #7a8ba6;
+  --accent: #5b9cf6;
+  --teal: #38d9a9;
+  --red: #f77f7f;
+  --amber: #f6be5b;
+  --green: #4ade80;
+  --mono: 'DM Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+/* ── LOCK SCREEN ── */
+#lock-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40px 20px;
+}
+
+.lock-card {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 40px;
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+}
+
+.lock-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.lock-logo svg { width: 28px; height: 28px; }
+
+.lock-logo-text b {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  display: block;
+  text-align: left;
+}
+
+.lock-logo-text span {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: block;
+  text-align: left;
+}
+
+.lock-card h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.lock-card p {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+
+.lock-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 16px;
+  letter-spacing: 0.2em;
+  text-align: center;
+  outline: none;
+  margin-bottom: 14px;
+  transition: border-color 0.15s;
+}
+
+.lock-input:focus { border-color: var(--accent); }
+
+.btn-unlock {
+  width: 100%;
+  padding: 12px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-unlock:hover { opacity: 0.85; }
+
+/* ── MAIN DASHBOARD ── */
+#dashboard {
+  display: none;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header */
+#dash-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.dash-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 16px;
+  border-right: 1px solid var(--border);
+}
+
+.dash-logo svg { width: 24px; height: 24px; }
+
+.dash-logo-text b {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  display: block;
+  line-height: 1.1;
+}
+
+.dash-logo-text span {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dash-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dash-subtitle {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.dash-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Status pill */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.status-pill.waiting { background: rgba(122,139,166,0.15); color: var(--muted); border: 1px solid rgba(122,139,166,0.3); }
+.status-pill.active { background: rgba(74,222,128,0.12); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+.status-pill.paused { background: rgba(246,190,91,0.12); color: var(--amber); border: 1px solid rgba(246,190,91,0.3); }
+.status-pill.stopped { background: rgba(247,127,127,0.12); color: var(--red); border: 1px solid rgba(247,127,127,0.3); }
+
+.pill-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.pill-dot.pulse { animation: blink 1.2s ease infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn:hover { background: var(--surface3); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn.green { background: rgba(74,222,128,0.12); border-color: rgba(74,222,128,0.35); color: var(--green); }
+.btn.green:hover { background: rgba(74,222,128,0.2); }
+.btn.amber { background: rgba(246,190,91,0.12); border-color: rgba(246,190,91,0.35); color: var(--amber); }
+.btn.amber:hover { background: rgba(246,190,91,0.2); }
+.btn.red { background: rgba(247,127,127,0.12); border-color: rgba(247,127,127,0.35); color: var(--red); }
+.btn.red:hover { background: rgba(247,127,127,0.2); }
+.btn.accent { background: rgba(91,156,246,0.12); border-color: rgba(91,156,246,0.35); color: var(--accent); }
+.btn.accent:hover { background: rgba(91,156,246,0.2); }
+
+/* Main grid */
+#dash-body {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 0;
+  flex: 1;
+}
+
+/* Sidebar */
+#sidebar {
+  border-right: 1px solid var(--border);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: var(--surface);
+}
+
+.sidebar-section {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.sidebar-section-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.sidebar-section-body {
+  padding: 14px;
+}
+
+/* Exam controls */
+.control-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-btn-full {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: var(--surface3);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.control-btn-full.green { background: rgba(74,222,128,0.12); border-color: rgba(74,222,128,0.35); color: var(--green); }
+.control-btn-full.green:hover { background: rgba(74,222,128,0.22); }
+.control-btn-full.amber { background: rgba(246,190,91,0.12); border-color: rgba(246,190,91,0.35); color: var(--amber); }
+.control-btn-full.amber:hover { background: rgba(246,190,91,0.22); }
+.control-btn-full.red { background: rgba(247,127,127,0.12); border-color: rgba(247,127,127,0.35); color: var(--red); }
+.control-btn-full.red:hover { background: rgba(247,127,127,0.22); }
+.control-btn-full:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* Code display */
+.code-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.code-value {
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.2em;
+}
+
+.code-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 22px;
+  letter-spacing: 0.25em;
+  text-align: center;
+  outline: none;
+  margin-bottom: 8px;
+}
+
+/* Roster upload */
+.upload-area {
+  border: 2px dashed var(--border2);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  margin-bottom: 10px;
+}
+
+.upload-area:hover { border-color: var(--accent); }
+.upload-area p { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+/* Main panel */
+#main-panel {
+  padding: 20px 24px;
+  overflow-y: auto;
+}
+
+/* Stats bar */
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+.stat-val {
+  font-family: var(--mono);
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Student table */
+.table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.table-header h2 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.refresh-info {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.student-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.student-table th {
+  text-align: left;
+  padding: 9px 12px;
+  background: var(--surface);
+  border-bottom: 2px solid var(--border2);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+}
+
+.student-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.student-table tr:hover td { background: var(--surface); cursor: pointer; }
+
+/* Progress bar */
+.prog-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.prog-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--surface3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.prog-fill {
+  height: 100%;
+  background: var(--teal);
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.prog-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  min-width: 36px;
+}
+
+/* Status badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.badge.not-started { background: rgba(122,139,166,0.1); color: var(--muted); }
+.badge.in-progress { background: rgba(91,156,246,0.12); color: var(--accent); }
+.badge.submitted { background: rgba(74,222,128,0.12); color: var(--green); }
+
+/* Tab switch badge */
+.ts-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.ts-badge.ok { color: var(--muted); }
+.ts-badge.warn { background: rgba(246,190,91,0.12); color: var(--amber); }
+.ts-badge.alert { background: rgba(247,127,127,0.12); color: var(--red); }
+
+/* Expanded row */
+.expand-row td {
+  padding: 0;
+  background: var(--surface);
+}
+
+.expand-content {
+  padding: 16px 20px;
+  border-left: 3px solid var(--accent);
+  margin: 0;
+}
+
+.q-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 32px);
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.q-cell {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--surface2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  position: relative;
+  cursor: default;
+}
+
+.q-cell.correct { background: rgba(74,222,128,0.15); border-color: rgba(74,222,128,0.4); color: var(--green); }
+.q-cell.incorrect { background: rgba(247,127,127,0.15); border-color: rgba(247,127,127,0.4); color: var(--red); }
+.q-cell.blank { background: var(--surface3); color: var(--muted); }
+.q-cell-letter {
+  font-size: 8px;
+  position: absolute;
+  bottom: 1px;
+  right: 2px;
+  opacity: 0.7;
+}
+
+/* Roster list */
+.roster-list {
+  max-height: 160px;
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.roster-item {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Toast */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 12px 18px;
+  font-size: 13px;
+  color: var(--text);
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.25s;
+  pointer-events: none;
+}
+
+#toast.show { opacity: 1; transform: translateY(0); }
+#toast.ok { border-color: rgba(74,222,128,0.4); color: var(--green); }
+#toast.err { border-color: rgba(247,127,127,0.4); color: var(--red); }
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ── LOCK SCREEN ── -->
+<div id="lock-screen">
+  <div class="lock-card">
+    <div class="lock-logo">
+      <svg viewBox="0 0 32 32" fill="none">
+        <rect x="4" y="6" width="18" height="22" rx="2" fill="#1e2636" stroke="#5b9cf6" stroke-width="1.2"/>
+        <rect x="7" y="4" width="18" height="22" rx="2" fill="#171d29" stroke="#5b9cf6" stroke-width="1.2"/>
+        <rect x="10" y="2" width="18" height="22" rx="2" fill="#10141c" stroke="#5b9cf6" stroke-width="1.5"/>
+        <line x1="14" y1="9" x2="24" y2="9" stroke="#5b9cf6" stroke-width="1.2" stroke-linecap="round"/>
+        <line x1="14" y1="13" x2="24" y2="13" stroke="#38d9a9" stroke-width="1.2" stroke-linecap="round"/>
+        <line x1="14" y1="17" x2="20" y2="17" stroke="#5b9cf6" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+      </svg>
+      <div class="lock-logo-text">
+        <b>PaperTrail</b>
+        <span>Teacher Dashboard</span>
+      </div>
+    </div>
+    <h2>AP Lang PE2</h2>
+    <p>Enter your teacher password to access the exam dashboard.</p>
+    <input type="password" class="lock-input" id="pw-input" placeholder="••••" maxlength="20"
+      onkeydown="if(event.key==='Enter') unlock()">
+    <button class="btn-unlock" onclick="unlock()">Unlock Dashboard →</button>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ── -->
+<div id="dashboard">
+
+  <div id="dash-header">
+    <div class="dash-logo">
+      <svg viewBox="0 0 32 32" fill="none">
+        <rect x="4" y="6" width="18" height="22" rx="2" fill="#1e2636" stroke="#5b9cf6" stroke-width="1.2"/>
+        <rect x="7" y="4" width="18" height="22" rx="2" fill="#171d29" stroke="#5b9cf6" stroke-width="1.2"/>
+        <rect x="10" y="2" width="18" height="22" rx="2" fill="#10141c" stroke="#5b9cf6" stroke-width="1.5"/>
+        <line x1="14" y1="9" x2="24" y2="9" stroke="#5b9cf6" stroke-width="1.2" stroke-linecap="round"/>
+        <line x1="14" y1="13" x2="24" y2="13" stroke="#38d9a9" stroke-width="1.2" stroke-linecap="round"/>
+        <line x1="14" y1="17" x2="20" y2="17" stroke="#5b9cf6" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+      </svg>
+      <div class="dash-logo-text">
+        <b>PaperTrail</b>
+        <span>Teacher Dashboard</span>
+      </div>
+    </div>
+    <div>
+      <div class="dash-title">AP English Language · Practice Exam #2</div>
+      <div class="dash-subtitle">Section I · MCQ · 45 Questions · 60 min</div>
+    </div>
+    <div class="dash-right">
+      <div class="status-pill waiting" id="exam-status-pill">
+        <div class="pill-dot"></div>
+        <span id="exam-status-text">Loading…</span>
+      </div>
+      <button class="btn accent" onclick="refreshData()">↻ Refresh</button>
+      <button class="btn" onclick="downloadAllCSV()">⬇ Export CSV</button>
+    </div>
+  </div>
+
+  <div id="dash-body">
+    <!-- Sidebar -->
+    <div id="sidebar">
+
+      <!-- Exam Controls -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">Exam Controls</div>
+        <div class="sidebar-section-body">
+          <div class="control-row">
+            <button class="control-btn-full green" id="btn-start" onclick="setExamStatus('active')">▶ Start Exam</button>
+            <button class="control-btn-full amber" id="btn-pause" onclick="setExamStatus('paused')" disabled>⏸ Pause Exam</button>
+            <button class="control-btn-full" id="btn-resume" onclick="setExamStatus('active')" style="display:none">▶ Resume Exam</button>
+            <button class="control-btn-full red" id="btn-stop" onclick="confirmStop()" disabled>⏹ Stop &amp; Collect</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Start Code -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">Start Code</div>
+        <div class="sidebar-section-body">
+          <div class="code-display">
+            <div class="code-value" id="code-display">----</div>
+            <button class="btn" onclick="generateCode()" style="padding:6px 10px;font-size:11px">New</button>
+          </div>
+          <input type="text" class="code-input" id="code-input" placeholder="----" maxlength="4"
+            inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
+          <button class="btn accent" onclick="saveCode()" style="width:100%;margin-top:4px;justify-content:center">Save Code</button>
+          <p style="font-size:11px;color:var(--muted);margin-top:8px">Share this code with students verbally before the exam.</p>
+        </div>
+      </div>
+
+      <!-- Roster Upload -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">Roster</div>
+        <div class="sidebar-section-body">
+          <div class="upload-area" onclick="document.getElementById('roster-file').click()">
+            <div style="font-size:20px">📄</div>
+            <strong style="font-size:13px">Upload CSV</strong>
+            <p>One student per line:<br>First Name, Last Name</p>
+          </div>
+          <input type="file" id="roster-file" accept=".csv,.txt" style="display:none" onchange="handleRosterFile(event)">
+          <textarea id="roster-paste" placeholder="Or paste names here:&#10;First, Last&#10;First, Last" rows="4"
+            style="width:100%;padding:8px 10px;background:var(--surface3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;resize:vertical;outline:none;margin-bottom:8px;line-height:1.5"></textarea>
+          <button class="btn accent" onclick="uploadRoster()" style="width:100%;justify-content:center">Upload Roster</button>
+          <div id="roster-preview" class="roster-list" style="margin-top:10px"></div>
+        </div>
+      </div>
+
+      <!-- Reset -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">Danger Zone</div>
+        <div class="sidebar-section-body">
+          <button class="control-btn-full red" onclick="confirmReset()">🗑 Reset All Submissions</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main panel -->
+    <div id="main-panel">
+      <!-- Stats bar -->
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="stat-val" id="stat-total">—</div>
+          <div class="stat-label">Roster</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--accent)" id="stat-active">—</div>
+          <div class="stat-label">In Progress</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--green)" id="stat-submitted">—</div>
+          <div class="stat-label">Submitted</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="stat-avg">—</div>
+          <div class="stat-label">Avg Score</div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-header">
+        <h2>Live Student Monitor</h2>
+        <div class="refresh-info" id="refresh-info">Auto-refreshes every 20s</div>
+      </div>
+
+      <table class="student-table">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Progress</th>
+            <th>Score</th>
+            <th>Time Used</th>
+            <th>Tab Switches</th>
+            <th>Camera</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="student-tbody">
+          <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const TEACHER_TOKEN = localStorage.getItem('teacher_token') || '';
+let teacherToken = '';
+let submissions = [];
+let rosterStudents = [];
+let expandedRow = null;
+let examCurrentStatus = 'waiting';
+
+// ── AUTH ────────────────────────────────────────────────────
+async function unlock() {
+  const pw = document.getElementById('pw-input').value;
+  // Verify by calling a protected endpoint
+  try {
+    const r = await fetch('/api/teacher?action=exam', {
+      headers: { 'x-teacher-token': pw }
+    });
+    if (r.status === 401) { alert('Wrong password.'); return; }
+    const data = await r.json();
+    teacherToken = pw;
+    localStorage.setItem('teacher_token', pw);
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'flex';
+    document.getElementById('dashboard').style.flexDirection = 'column';
+    initDashboard(data.exam);
+  } catch {
+    alert('Could not connect. Check your network.');
+  }
+}
+
+// Try auto-login with saved token
+window.onload = async () => {
+  const saved = localStorage.getItem('teacher_token');
+  if (saved) {
+    document.getElementById('pw-input').value = saved;
+    try {
+      const r = await fetch('/api/teacher?action=exam', {
+        headers: { 'x-teacher-token': saved }
+      });
+      if (r.ok) {
+        const data = await r.json();
+        teacherToken = saved;
+        document.getElementById('lock-screen').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'flex';
+        document.getElementById('dashboard').style.flexDirection = 'column';
+        initDashboard(data.exam);
+      }
+    } catch {}
+  }
+};
+
+// ── INIT ────────────────────────────────────────────────────
+async function initDashboard(exam) {
+  updateExamUI(exam);
+  await refreshData();
+  setInterval(refreshData, 20000);
+}
+
+async function refreshData() {
+  try {
+    const [subR, examR] = await Promise.all([
+      fetch('/api/teacher?action=submissions', { headers: { 'x-teacher-token': teacherToken } }),
+      fetch('/api/teacher?action=exam', { headers: { 'x-teacher-token': teacherToken } })
+    ]);
+    const { submissions: subs } = await subR.json();
+    const { exam } = await examR.json();
+    submissions = subs || [];
+    updateExamUI(exam);
+    renderTable();
+    document.getElementById('refresh-info').textContent = `Last refresh: ${new Date().toLocaleTimeString()}`;
+  } catch {}
+}
+
+function updateExamUI(exam) {
+  if (!exam) return;
+  examCurrentStatus = exam.status;
+  const pill = document.getElementById('exam-status-pill');
+  const txt = document.getElementById('exam-status-text');
+  pill.className = `status-pill ${exam.status}`;
+  txt.textContent = exam.status.toUpperCase();
+
+  const dot = pill.querySelector('.pill-dot');
+  dot.className = exam.status === 'active' ? 'pill-dot pulse' : 'pill-dot';
+
+  const btnStart = document.getElementById('btn-start');
+  const btnPause = document.getElementById('btn-pause');
+  const btnResume = document.getElementById('btn-resume');
+  const btnStop = document.getElementById('btn-stop');
+
+  if (exam.status === 'waiting') {
+    btnStart.disabled = false; btnPause.disabled = true;
+    btnResume.style.display = 'none'; btnPause.style.display = 'block';
+    btnStop.disabled = true;
+  } else if (exam.status === 'active') {
+    btnStart.disabled = true; btnPause.disabled = false;
+    btnResume.style.display = 'none'; btnPause.style.display = 'block';
+    btnStop.disabled = false;
+  } else if (exam.status === 'paused') {
+    btnStart.disabled = true; btnPause.style.display = 'none';
+    btnResume.style.display = 'block'; btnStop.disabled = false;
+  } else if (exam.status === 'stopped') {
+    btnStart.disabled = true; btnPause.disabled = true;
+    btnResume.style.display = 'none'; btnStop.disabled = true;
+  }
+
+  // Code
+  if (exam.start_code) {
+    document.getElementById('code-display').textContent = exam.start_code;
+    document.getElementById('code-input').value = exam.start_code;
+  }
+}
+
+// ── EXAM CONTROLS ───────────────────────────────────────────
+async function setExamStatus(status) {
+  try {
+    await fetch('/api/teacher?action=set-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-teacher-token': teacherToken },
+      body: JSON.stringify({ status })
+    });
+    toast(`Exam ${status}`, 'ok');
+    await refreshData();
+  } catch { toast('Error', 'err'); }
+}
+
+function confirmStop() {
+  if (!confirm('Stop the exam and force all students to submit? This cannot be undone.')) return;
+  setExamStatus('stopped');
+}
+
+function generateCode() {
+  const code = String(Math.floor(1000 + Math.random() * 9000));
+  document.getElementById('code-input').value = code;
+  document.getElementById('code-display').textContent = code;
+}
+
+async function saveCode() {
+  const code = document.getElementById('code-input').value.trim();
+  if (code.length !== 4 || !/^\d+$/.test(code)) { toast('Code must be 4 digits', 'err'); return; }
+  try {
+    await fetch('/api/teacher?action=set-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-teacher-token': teacherToken },
+      body: JSON.stringify({ status: examCurrentStatus, start_code: code })
+    });
+    document.getElementById('code-display').textContent = code;
+    toast('Code saved: ' + code, 'ok');
+  } catch { toast('Error saving code', 'err'); }
+}
+
+// ── ROSTER ──────────────────────────────────────────────────
+function handleRosterFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('roster-paste').value = ev.target.result;
+  };
+  reader.readAsText(file);
+}
+
+async function uploadRoster() {
+  const text = document.getElementById('roster-paste').value.trim();
+  if (!text) { toast('No roster data', 'err'); return; }
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const students = [];
+  lines.forEach(line => {
+    // Skip header lines
+    if (line.toLowerCase().includes('first') && line.toLowerCase().includes('last')) return;
+    const parts = line.split(',').map(p => p.trim());
+    if (parts.length >= 2 && parts[0] && parts[1]) {
+      students.push({ first_name: parts[0], last_name: parts[1] });
+    } else if (parts.length === 1 && parts[0]) {
+      // Try "First Last" space-separated
+      const sp = parts[0].split(' ');
+      if (sp.length >= 2) students.push({ first_name: sp[0], last_name: sp.slice(1).join(' ') });
+    }
+  });
+  if (!students.length) { toast('No valid students found. Use: First, Last', 'err'); return; }
+  try {
+    const r = await fetch('/api/teacher?action=upload-roster', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-teacher-token': teacherToken },
+      body: JSON.stringify({ students })
+    });
+    const data = await r.json();
+    toast(`${data.count} students uploaded`, 'ok');
+    renderRosterPreview(students);
+  } catch { toast('Upload failed', 'err'); }
+}
+
+function renderRosterPreview(students) {
+  rosterStudents = students;
+  const el = document.getElementById('roster-preview');
+  el.innerHTML = students.map(s =>
+    `<div class="roster-item">${s.last_name}, ${s.first_name}</div>`
+  ).join('');
+}
+
+// ── TABLE ───────────────────────────────────────────────────
+function renderTable() {
+  const inProgress = submissions.filter(s => s.status === 'In Progress').length;
+  const submitted = submissions.filter(s => s.status === 'Submitted').length;
+  const scores = submissions.filter(s => s.score != null && s.status === 'Submitted').map(s => s.score);
+  const avg = scores.length ? Math.round(scores.reduce((a,b) => a+b, 0) / scores.length) : '—';
+
+  document.getElementById('stat-total').textContent = rosterStudents.length || submissions.length;
+  document.getElementById('stat-active').textContent = inProgress;
+  document.getElementById('stat-submitted').textContent = submitted;
+  document.getElementById('stat-avg').textContent = scores.length ? `${avg}/45` : '—';
+
+  const tbody = document.getElementById('student-tbody');
+  if (!submissions.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">No students have started yet.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = '';
+  submissions.forEach((s, i) => {
+    const answered = s.answers ? Object.keys(s.answers).length : 0;
+    const pct = Math.round((answered / 45) * 100);
+    const ts = (s.tab_switches || []).length;
+    const tsClass = ts === 0 ? 'ok' : ts <= 2 ? 'warn' : 'alert';
+    const statusBadge = s.status === 'Submitted' ? 'submitted' : 'in-progress';
+    const score = s.status === 'Submitted' && s.score != null ? `${s.score}/45 (${s.percent}%)` : '—';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${s.student_name}</strong></td>
+      <td>
+        <div class="prog-wrap">
+          <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+          <div class="prog-label">${answered}/45</div>
+        </div>
+      </td>
+      <td style="font-family:var(--mono);font-size:12px">${score}</td>
+      <td style="font-family:var(--mono);font-size:12px">${s.time_used || '—'}</td>
+      <td><span class="ts-badge ${tsClass}">${ts === 0 ? '—' : `⚠ ${ts}`}</span></td>
+      <td style="font-size:12px">${s.camera_used ? '📷 On' : '—'}</td>
+      <td><span class="badge ${statusBadge}">${s.status === 'Submitted' ? '✓ Submitted' : '● In Progress'}</span></td>
+    `;
+    tr.onclick = () => toggleExpand(s, tr, i);
+    tbody.appendChild(tr);
+
+    // Expand row placeholder
+    const expandTr = document.createElement('tr');
+    expandTr.className = 'expand-row';
+    expandTr.id = `expand-${i}`;
+    expandTr.style.display = 'none';
+    const expandTd = document.createElement('td');
+    expandTd.colSpan = 7;
+    expandTr.appendChild(expandTd);
+    tbody.appendChild(expandTr);
+  });
+}
+
+function toggleExpand(submission, row, idx) {
+  const expandTr = document.getElementById(`expand-${idx}`);
+  if (expandTr.style.display === 'table-row') {
+    expandTr.style.display = 'none';
+    return;
+  }
+  // Close any open
+  document.querySelectorAll('.expand-row').forEach(r => r.style.display = 'none');
+  expandTr.style.display = 'table-row';
+
+  const answers = submission.answers || {};
+  const perQ = submission.per_question || {};
+  const tabSwitches = submission.tab_switches || [];
+
+  let html = `<div class="expand-content">`;
+  html += `<div style="display:flex;gap:24px;margin-bottom:12px;font-size:12px;color:var(--muted)">`;
+  html += `<span>📋 Answers: ${Object.keys(answers).length}/45</span>`;
+  html += `<span>⚠ Tab switches: ${tabSwitches.length}</span>`;
+  html += `<span>📷 Snapshots: ${submission.snapshot_count || 0}</span>`;
+  if ((submission.flagged_questions || []).length > 0) {
+    html += `<span>⚑ Flagged: Q${submission.flagged_questions.join(', Q')}</span>`;
+  }
+  html += `</div>`;
+
+  html += `<div class="q-grid">`;
+  for (let n = 1; n <= 45; n++) {
+    const given = answers[n];
+    const qd = perQ[n];
+    let cls = 'blank', letter = given || '—';
+    if (qd) {
+      cls = qd.result === 'correct' ? 'correct' : qd.result === 'incorrect' ? 'incorrect' : 'blank';
+    } else if (given) {
+      cls = '';
+    }
+    html += `<div class="q-cell ${cls}" title="Q${n}: ${given || 'blank'}">
+      ${n}
+      <span class="q-cell-letter">${given || ''}</span>
+    </div>`;
+  }
+  html += `</div></div>`;
+  expandTr.querySelector('td').innerHTML = html;
+}
+
+// ── RESET ───────────────────────────────────────────────────
+async function confirmReset() {
+  if (!confirm('Delete ALL student submissions? This cannot be undone.')) return;
+  try {
+    await fetch('/api/teacher?action=reset', {
+      method: 'POST',
+      headers: { 'x-teacher-token': teacherToken }
+    });
+    toast('Submissions cleared', 'ok');
+    submissions = [];
+    renderTable();
+  } catch { toast('Error', 'err'); }
+}
+
+// ── CSV EXPORT ───────────────────────────────────────────────
+function downloadAllCSV() {
+  let csv = `AP English Language Practice Exam #2 — All Results\nExported,${new Date().toLocaleString()}\n\n`;
+  csv += `Student,Score,Percent,Time Used,Tab Switches,Camera,Status`;
+  for (let n = 1; n <= 45; n++) csv += `,Q${n}`;
+  csv += `\n`;
+  submissions.forEach(s => {
+    const answers = s.answers || {};
+    csv += `${s.student_name},${s.score ?? ''},${s.percent ?? ''},${s.time_used || ''},${(s.tab_switches||[]).length},${s.camera_used ? 'Yes':'No'},${s.status}`;
+    for (let n = 1; n <= 45; n++) csv += `,${answers[n] || ''}`;
+    csv += `\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `AP_Lang_PE2_Results_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ── TOAST ────────────────────────────────────────────────────
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  setTimeout(() => el.className = '', 3000);
+}
+</script>
+</body>
+</html>
