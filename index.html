@@ -909,7 +909,160 @@ body {
 
 .btn-dl:hover { background: var(--accent); }
 
-/* Scrollbars */
+/* ── MONITORING DISCLOSURE SCREEN ── */
+#monitoring-screen {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40px 20px;
+  background: var(--bg);
+}
+
+.monitoring-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 40px;
+  width: 100%;
+  max-width: 560px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.monitoring-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--navy);
+}
+
+.monitoring-icon {
+  width: 44px;
+  height: 44px;
+  background: var(--navy);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.monitoring-header-text h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 2px;
+}
+
+.monitoring-header-text p {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+}
+
+.monitoring-intro {
+  font-size: 13.5px;
+  color: var(--text-mid);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.monitoring-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 24px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.monitoring-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+.monitoring-item:last-child { border-bottom: none; }
+.monitoring-item:hover { background: var(--bg); }
+
+.monitoring-item-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  width: 24px;
+  text-align: center;
+}
+
+.monitoring-item-text strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.monitoring-item-text span {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.monitoring-acknowledge {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fff8e1;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  cursor: pointer;
+}
+
+.monitoring-acknowledge input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  accent-color: var(--navy);
+  cursor: pointer;
+}
+
+.monitoring-acknowledge label {
+  font-size: 13px;
+  color: var(--text-mid);
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.monitoring-acknowledge label strong { color: var(--text); }
+
+.btn-acknowledge {
+  width: 100%;
+  padding: 13px;
+  background: var(--navy);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-acknowledge:hover:not(:disabled) { background: var(--accent); }
+.btn-acknowledge:disabled { opacity: 0.4; cursor: not-allowed; }
+
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
@@ -967,6 +1120,77 @@ body {
     </div>
 
     <button class="btn-primary" id="begin-btn" onclick="beginExam()" disabled>Begin Exam →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     MONITORING DISCLOSURE SCREEN
+══════════════════════════════════════════════════════════ -->
+<div id="monitoring-screen">
+  <div class="monitoring-card">
+    <div class="monitoring-header">
+      <div class="monitoring-icon">🔒</div>
+      <div class="monitoring-header-text">
+        <h2>Before You Begin — What We Monitor</h2>
+        <p>AP English Language · Practice Exam #2</p>
+      </div>
+    </div>
+
+    <p class="monitoring-intro">
+      This exam uses academic integrity technology. The following data is collected
+      during your exam session and is visible to your teacher.
+    </p>
+
+    <div class="monitoring-items">
+      <div class="monitoring-item">
+        <div class="monitoring-item-icon">📷</div>
+        <div class="monitoring-item-text">
+          <strong>Live Camera Feed</strong>
+          <span>Your webcam is on for the duration of the exam. A small preview is visible in the corner of your screen. Periodic snapshots are captured automatically.</span>
+        </div>
+      </div>
+      <div class="monitoring-item">
+        <div class="monitoring-item-icon">👁</div>
+        <div class="monitoring-item-text">
+          <strong>Eye Tracking</strong>
+          <span>Your gaze direction is monitored. If your eyes leave the screen for more than 2 seconds, this is logged with a timestamp and the question you were on.</span>
+        </div>
+      </div>
+      <div class="monitoring-item">
+        <div class="monitoring-item-icon">🔀</div>
+        <div class="monitoring-item-text">
+          <strong>Tab & Window Switching</strong>
+          <span>Every time you navigate away from this tab or window, it is detected and logged with the exact time it occurred.</span>
+        </div>
+      </div>
+      <div class="monitoring-item">
+        <div class="monitoring-item-icon">✏️</div>
+        <div class="monitoring-item-text">
+          <strong>Answer Changes</strong>
+          <span>Every time you change an answer, both the original and new answer are recorded along with the timestamp. Late changes to correct answers are flagged for review.</span>
+        </div>
+      </div>
+      <div class="monitoring-item">
+        <div class="monitoring-item-icon">⏱</div>
+        <div class="monitoring-item-text">
+          <strong>Time & Activity Log</strong>
+          <span>Your start time, time spent, and all significant actions during the exam are recorded in a detailed activity log.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="monitoring-acknowledge" onclick="document.getElementById('ack-check').click()">
+      <input type="checkbox" id="ack-check" onchange="updateAckBtn()">
+      <label for="ack-check">
+        <strong>I understand and agree.</strong> I confirm that I will complete this exam independently,
+        without assistance from other people, AI tools, or unauthorized resources.
+        I understand that the monitoring described above is active for the duration of my exam.
+      </label>
+    </div>
+
+    <button class="btn-acknowledge" id="ack-btn" onclick="proceedToCamera()" disabled>
+      I Understand — Enable Camera →
+    </button>
   </div>
 </div>
 
@@ -1347,8 +1571,21 @@ function beginExam() {
     allottedSeconds = (data.duration_minutes || defaultDurationMinutes) * 60;
     timeLeft = allottedSeconds;
     clearInterval(statusPollInterval);
-    requestCamera();
+
+    // Show monitoring disclosure before camera
+    document.getElementById('waiting-screen').style.display = 'none';
+    document.getElementById('monitoring-screen').style.display = 'flex';
   }).catch(() => alert('Could not verify code. Check your connection.'));
+}
+
+function updateAckBtn() {
+  const checked = document.getElementById('ack-check').checked;
+  document.getElementById('ack-btn').disabled = !checked;
+}
+
+function proceedToCamera() {
+  document.getElementById('monitoring-screen').style.display = 'none';
+  requestCamera();
 }
 
 // Camera is REQUIRED — no option to skip
