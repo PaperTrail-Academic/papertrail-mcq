@@ -7,13 +7,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Answer key lives here as an env var: ANSWER_KEY={"1":"C","2":"D",...}
 function getAnswerKey() {
-  try {
-    return JSON.parse(process.env.ANSWER_KEY);
-  } catch {
-    return {};
-  }
+  try { return JSON.parse(process.env.ANSWER_KEY); }
+  catch { return {}; }
 }
 
 module.exports = async (req, res) => {
@@ -27,7 +23,8 @@ module.exports = async (req, res) => {
     const {
       submissionId, studentName, answers,
       timeUsed, tabSwitches, activityLog,
-      cameraUsed, snapshotCount, flaggedQuestions, status
+      cameraUsed, snapshotCount, flaggedQuestions, status,
+      startedAt, allottedSeconds
     } = req.body;
 
     const key = getAnswerKey();
@@ -45,8 +42,7 @@ module.exports = async (req, res) => {
     const score = correct;
     const percent = Math.round((correct / 45) * 100);
 
-    // Upsert by submissionId so progressive saves work
-    const { error } = await supabase.from('submissions').upsert({
+    const upsertData = {
       id: submissionId,
       student_name: studentName,
       answers,
@@ -61,11 +57,18 @@ module.exports = async (req, res) => {
       flagged_questions: flaggedQuestions,
       status,
       last_updated: new Date().toISOString()
-    }, { onConflict: 'id' });
+    };
+
+    // Only set on initial save — don't overwrite if teacher added time
+    if (startedAt)       upsertData.started_at = startedAt;
+    if (allottedSeconds) upsertData.allotted_seconds = allottedSeconds;
+
+    const { error } = await supabase
+      .from('submissions')
+      .upsert(upsertData, { onConflict: 'id', ignoreDuplicates: false });
 
     if (error) throw error;
 
-    // Return score only to browser — per_question detail for results screen
     return res.status(200).json({ ok: true, score, percent, correct, incorrect, blank, perQuestion });
   } catch (err) {
     console.error('submit error:', err);
